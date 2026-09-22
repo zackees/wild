@@ -48,6 +48,16 @@ jobs:
           ref: ${{ steps.revisions.outputs.base }}
           persist-credentials: false
           path: baseline
+      - name: Checkout trusted performance guard
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.0
+        with:
+          ref: 895e05fdf3ec6cd0477d0fec6cf30e56b8961514
+          persist-credentials: false
+          path: trusted-action
+          sparse-checkout: |
+            .github/actions/performance-guard
+            benchmarks/performance_guard
+          sparse-checkout-cone-mode: false
       - name: Install pinned Rust toolchain
         uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
         with:
@@ -80,7 +90,7 @@ jobs:
           } > candidate/performance-evidence/environment.txt
           cp "$RUNNER_TEMP/wild-performance-binaries/SHA256SUMS" candidate/performance-evidence/
       - name: Run trusted repository-owned guard
-        uses: zackees/wild/.github/actions/performance-guard@895e05fdf3ec6cd0477d0fec6cf30e56b8961514
+        uses: ./trusted-action/.github/actions/performance-guard
         with:
           baseline: ${{ runner.temp }}/wild-performance-binaries/baseline-wild
           candidate: ${{ runner.temp }}/wild-performance-binaries/candidate-wild
