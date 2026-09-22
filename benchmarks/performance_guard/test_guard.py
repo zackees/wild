@@ -26,7 +26,7 @@ class GuardTest(unittest.TestCase):
             guard.classify(baseline, candidate, 1.5, 1.5)["status"], "inconclusive"
         )
 
-    def test_ab_ba_results_are_aggregated_by_name(self):
+    def test_reversed_order_results_are_aggregated_by_name(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "block.json"
             path.write_text(
