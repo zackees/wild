@@ -51,7 +51,7 @@ jobs:
       - name: Checkout trusted performance guard
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.0
         with:
-          ref: 895e05fdf3ec6cd0477d0fec6cf30e56b8961514
+          ref: 6164591eaeeefb36e3605960e9b66d1d835111d3
           persist-credentials: false
           path: trusted-action
           sparse-checkout: |
