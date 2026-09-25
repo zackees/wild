@@ -1,0 +1,27 @@
+# Throwaway experiment: setup-soldr cache materialization time, 1.97.1 vs 1.98.1.
+name: soldr-cache-probe
+on:
+  push:
+    branches: [exp/soldr-cache-toolchain]
+permissions:
+  contents: read
+jobs:
+  probe:
+    name: probe ${{ matrix.toolchain }} ${{ matrix.env }}
+    runs-on: ubuntu-24.04
+    container: ${{ matrix.env == 'container' && 'ghcr.io/wild-linker/wild/ci-ubuntu-amd64:sha-fc8fa6975269300dacfc3c8fff06b3ba2f96721b' || null }}
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain: ["1.97.1", "1.98.1"]
+        env: [hosted, container]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: printf '[toolchain]\nchannel = "%s"\ncomponents = ["clippy", "rustfmt"]\nprofile = "minimal"\n' "${{ matrix.toolchain }}" > rust-toolchain.toml
+      - uses: zackees/setup-soldr@v0
+        with:
+          cache: true
+      - run: rustc --version
+      - run: soldr cargo check -p wild-linker
