@@ -110,14 +110,13 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@1.98.1
-        id: rust-toolchain
+      - uses: zackees/setup-soldr@v0
         with:
-          targets: ${{ matrix.target }}
+          cache: true
+      - run: rustup target add ${{ matrix.target }}
       - run: rustc --version
-      - uses: Swatinem/rust-cache@v2
       - run: cp -f ${{ matrix.config }} .cargo/config.toml
-      - run: cargo build --target ${{ matrix.target }}
+      - run: soldr cargo build --target ${{ matrix.target }}
 
   wasip1-build:
     name: Build wasip1
@@ -133,17 +132,16 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@1.98.1
-        id: rust-toolchain
+      - uses: zackees/setup-soldr@v0
         with:
-          targets: wasm32-wasip1
+          cache: true
+      - run: rustup target add wasm32-wasip1
       - run: rustc --version
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo build --target wasm32-wasip1
+      - run: soldr cargo build --target wasm32-wasip1
       - run: cp -f .cargo/config.toml.cross-wasm32p1 .cargo/config.toml
       # -p libwild prevents integration tests from running. they depend on
       # spawning processes, which isn't supported on wasi.
-      - run: cargo test --profile ci -p libwild --target wasm32-wasip1
+      - run: soldr cargo test --profile ci -p libwild --target wasm32-wasip1
 
   wasm-test:
     name: Test Wasm
@@ -155,12 +153,11 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@1.98.1
-        id: rust-toolchain
+      - uses: zackees/setup-soldr@v0
         with:
-          targets: wasm32-wasip1
+          cache: true
+      - run: rustup target add wasm32-wasip1
       - run: rustc --version
-      - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@v2.87.13
         with:
           tool: wasm-tools
@@ -168,7 +165,7 @@ jobs:
         uses: bytecodealliance/actions/wasmtime/setup@v1
         with:
           version: '48.0.0'
-      - run: cargo test --features wasm -- wasm
+      - run: soldr cargo test --features wasm -- wasm
 
   macho-build:
     name: Test Mach-O (AArch64)
@@ -183,15 +180,13 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@1.98.1
-        id: rust-toolchain
-      - run: rustc --version
-      - uses: Swatinem/rust-cache@v2
+      - uses: zackees/setup-soldr@v0
         with:
-          env-vars: ImageVersion
+          cache: true
+      - run: rustc --version
       - run: echo "WILD_TEST_CONFIG=test-config-ci.toml" >> $GITHUB_ENV
-      - run: cargo build --profile ci --workspace --no-default-features
-      - run: cargo test --profile ci --workspace --features macho
+      - run: soldr cargo build --profile ci --workspace --no-default-features
+      - run: soldr cargo test --profile ci --workspace --features macho
 
   windows-build:
     name: Build Windows (x86_64)
@@ -201,11 +196,11 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@1.98.1
-        id: rust-toolchain
+      - uses: zackees/setup-soldr@v0
+        with:
+          cache: true
       - run: rustc --version
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo build --profile ci --workspace --no-default-features
+      - run: soldr cargo build --profile ci --workspace --no-default-features
 
   minimal-versions:
     runs-on: ubuntu-24.04
@@ -216,14 +211,14 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@1.98.1
-        id: rust-toolchain
+      - uses: zackees/setup-soldr@v0
+        with:
+          cache: true
       - run: rustc --version
       - uses: taiki-e/install-action@v2.87.13
         with:
           tool: cargo-hack,cargo-minimal-versions,taplo
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo minimal-versions --direct test --profile ci
+      - run: soldr cargo minimal-versions --direct test --profile ci
 
   clippy:
     name: Clippy
