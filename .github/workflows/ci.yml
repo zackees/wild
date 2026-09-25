@@ -235,7 +235,9 @@ jobs:
           tool: cargo-hack,cargo-minimal-versions,taplo
       # Plain cargo: under soldr's compile cache, the cc-built plugin shim
       # object in libwild's build script goes missing before `ar` runs.
-      - run: cargo minimal-versions --direct test --profile ci
+      # setup-soldr exports CLICOLOR_FORCE/FORCE_COLOR, which makes wild colour
+      # its --sym-info output and breaks the link-args/sym-info regex.
+      - run: env -u CLICOLOR_FORCE -u FORCE_COLOR cargo minimal-versions --direct test --profile ci
 
   clippy:
     name: Clippy
