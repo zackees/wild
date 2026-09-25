@@ -2202,7 +2202,7 @@ fn write_monolithic_object_sections<'data, C: ElfClass, A: Arch<Platform = elf::
     }
 
     {
-        let _timing = crate::timing_guard!("Populate monolithic object sections");
+        crate::timing::verbose_timing_phase!("Populate monolithic object sections");
         let populate_results = prepared_sections
             .par_iter_mut()
             .map(|prepared| prepared.populate::<C, A>(object, layout))
@@ -2210,7 +2210,7 @@ fn write_monolithic_object_sections<'data, C: ElfClass, A: Arch<Platform = elf::
         populate_results.into_iter().collect::<Result<Vec<_>>>()?;
     }
 
-    let _timing = crate::timing_guard!("Relocate monolithic object sections");
+    crate::timing::verbose_timing_phase!("Relocate monolithic object sections");
     for prepared in prepared_sections {
         match prepared {
             PreparedObjectSection::Loaded {
