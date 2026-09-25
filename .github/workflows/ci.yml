@@ -113,10 +113,13 @@ jobs:
       # Cross-target builds use plain cargo: soldr's zccache wrapping and
       # linker injection would compile/link target objects with the host
       # toolchain.
+      # The solo toolchain cache is keyed without targets, so a restored
+      # toolchain can claim a target's rust-std is installed without its files.
       - uses: zackees/setup-soldr@v0
         with:
           cache: true
           linker: platform-default
+          solo-toolchain-cache: false
       - run: rustup target add ${{ matrix.target }}
       - run: rustc --version
       - run: cp -f ${{ matrix.config }} .cargo/config.toml
@@ -139,10 +142,13 @@ jobs:
       # Cross-target builds use plain cargo: soldr's zccache wrapping and
       # linker injection would compile/link target objects with the host
       # toolchain.
+      # The solo toolchain cache is keyed without targets, so a restored
+      # toolchain can claim a target's rust-std is installed without its files.
       - uses: zackees/setup-soldr@v0
         with:
           cache: true
           linker: platform-default
+          solo-toolchain-cache: false
       - run: rustup target add wasm32-wasip1
       - run: rustc --version
       - run: cargo build --target wasm32-wasip1
@@ -164,6 +170,7 @@ jobs:
       - uses: zackees/setup-soldr@v0
         with:
           cache: true
+          solo-toolchain-cache: false
       - run: rustup target add wasm32-wasip1
       - run: rustc --version
       - uses: taiki-e/install-action@v2.87.13
@@ -226,7 +233,9 @@ jobs:
       - uses: taiki-e/install-action@v2.87.13
         with:
           tool: cargo-hack,cargo-minimal-versions,taplo
-      - run: soldr cargo minimal-versions --direct test --profile ci
+      # Plain cargo: under soldr's compile cache, the cc-built plugin shim
+      # object in libwild's build script goes missing before `ar` runs.
+      - run: cargo minimal-versions --direct test --profile ci
 
   clippy:
     name: Clippy

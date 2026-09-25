@@ -62,6 +62,9 @@ jobs:
         uses: zackees/setup-soldr@v0
         with:
           cache: true
+          # Sources live under baseline/ and candidate/, so there is no
+          # root Cargo.lock for setup-soldr's yank audit and cache key.
+          lockfile: candidate/Cargo.lock
       - name: Install pinned toolchain for both revisions
         shell: bash
         run: rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal
