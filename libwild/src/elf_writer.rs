@@ -2163,7 +2163,7 @@ fn write_monolithic_object_sections<'data, C: ElfClass, A: Arch<Platform = elf::
 ) -> Result {
     let mut prepared_sections = Vec::with_capacity(object.sections.len());
     {
-        let _timing = crate::timing_guard!("Allocate monolithic object sections");
+        crate::timing::verbose_timing_phase!("Allocate monolithic object sections");
         for (i, sec) in object.sections.iter().enumerate() {
             let section_index = object::SectionIndex(i);
             match sec {
