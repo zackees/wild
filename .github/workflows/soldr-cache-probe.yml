@@ -9,19 +9,22 @@ jobs:
   probe:
     name: probe ${{ matrix.toolchain }} ${{ matrix.env }}
     runs-on: ubuntu-24.04
-    container: ${{ matrix.env == 'container' && 'ghcr.io/wild-linker/wild/ci-ubuntu-amd64:sha-fc8fa6975269300dacfc3c8fff06b3ba2f96721b' || null }}
+    container: ${{ matrix.env != 'hosted' && 'ghcr.io/wild-linker/wild/ci-ubuntu-amd64:sha-fc8fa6975269300dacfc3c8fff06b3ba2f96721b' || null }}
     strategy:
       fail-fast: false
       matrix:
         toolchain: ["1.97.1", "1.98.1"]
-        env: [hosted, container]
+        env: [hosted, container, container-fresh-home]
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - run: printf '[toolchain]\nchannel = "%s"\ncomponents = ["clippy", "rustfmt"]\nprofile = "minimal"\n' "${{ matrix.toolchain }}" > rust-toolchain.toml
+      - if: matrix.env == 'container-fresh-home'
+        run: echo "RUSTUP_HOME=$RUNNER_TEMP/rustup-home" >> "$GITHUB_ENV"
       - uses: zackees/setup-soldr@v0
         with:
           cache: true
+      - run: echo "RUSTUP_HOME=$RUSTUP_HOME"; which rustc cargo
       - run: rustc --version
       - run: soldr cargo check -p wild-linker
