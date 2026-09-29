@@ -255,8 +255,6 @@ jobs:
             # Ubuntu's clang passes --build-id, so the capture has one; a later flag overrides it.
             extra="--build-id=$mode"
             reference=(--reference "$RUNNER_TEMP/bins/upstream-wild")
-            # The fork's fast build ID differs from upstream's (#23); only check identity without one.
-            [ "$mode" = fast ] && reference=()
             printf '### --build-id=%s\n\n' "$mode" >> evidence/summary.md
             python3 candidate/benchmarks/performance_guard/capture_ab.py \
               --capture "$CAPTURE" \
