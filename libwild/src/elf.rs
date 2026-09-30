@@ -3170,6 +3170,12 @@ impl<'data, C: ElfClass> platform::ObjectFile<'data> for File<'data, C> {
     }
 
     fn section_name(&self, index: object::SectionIndex) -> Result<&'data [u8]> {
+        // The null section has no name. `object` reports index 0 as invalid, and building that
+        // error for every input file is measurable, since section resolution asks for the name
+        // of every section.
+        if index.0 == 0 {
+            return Ok(&[]);
+        }
         let section = self.sections.section(index)?;
         Ok(self.sections.section_name(LittleEndian, section)?)
     }
