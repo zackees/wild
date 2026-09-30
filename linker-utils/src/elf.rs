@@ -1139,8 +1139,10 @@ pub struct RelocationKindInfo {
 impl RelocationKindInfo {
     #[inline(always)]
     fn verify(&self, value: i64) -> Result<()> {
+        // Most relocations have an alignment of 1. Skip the check for them, since it's a
+        // division by a value that isn't known at compile time.
         anyhow::ensure!(
-            (value as usize).is_multiple_of(usize::from(self.alignment)),
+            self.alignment == 1 || (value as usize).is_multiple_of(usize::from(self.alignment)),
             "Relocation {value} not aligned to {} bytes",
             self.alignment
         );
