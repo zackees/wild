@@ -2980,6 +2980,105 @@ fn debug_relocation_shard_ranges_parallel(
     Ok(Some(ranges))
 }
 
+/// Splits relocations into `shard_count` equal runs by index. Each shard owns the output from
+/// its first relocation's offset up to the next shard's first offset (the first shard starts at
+/// zero). Returns None if those start offsets go backwards or past the end of the output. Unlike
+/// [`debug_relocation_shard_ranges_parallel`], this reads one offset per shard: whether every
+/// relocation fits its shard is checked as it's applied.
+fn speculative_debug_relocation_shard_ranges(
+    relocation_count: usize,
+    output_len: usize,
+    shard_count: usize,
+    offset_at: impl Fn(usize) -> u64,
+) -> Option<Vec<DebugRelocationShardRange>> {
+    let shard_count = shard_count.min(relocation_count);
+    if shard_count < 2 {
+        return None;
+    }
+    let starts = (0..shard_count)
+        .map(|shard| relocation_count * shard / shard_count)
+        .collect::<Vec<_>>();
+    let mut ranges = Vec::with_capacity(shard_count);
+    for (shard, &start) in starts.iter().enumerate() {
+        let end = starts.get(shard + 1).copied().unwrap_or(relocation_count);
+        let output_start = if shard == 0 {
+            0
+        } else {
+            usize::try_from(offset_at(start)).ok()?
+        };
+        let output_end = match starts.get(shard + 1) {
+            Some(&next) => usize::try_from(offset_at(next)).ok()?,
+            None => output_len,
+        };
+        if output_start > output_end || output_end > output_len {
+            return None;
+        }
+        ranges.push(DebugRelocationShardRange {
+            relocations: start..end,
+            output: output_start..output_end,
+        });
+    }
+    Some(ranges)
+}
+
+/// Applies debug relocations in parallel shards without first checking that they're sorted.
+/// Returns false if any relocation fails, including one that falls outside its shard's output.
+/// The caller must then reapply everything in order, so this is only for architectures where
+/// [`Arch::DEBUG_RELOCATIONS_OVERWRITE`] holds.
+fn try_apply_debug_rela_relocations_speculatively<
+    'data,
+    C: ElfClass,
+    A: Arch<Platform = elf::Elf<C>>,
+>(
+    object: &ObjectLayout<'data, elf::Elf<C>>,
+    out: &mut [u8],
+    section_index: object::SectionIndex,
+    relocations: &[elf::Rela<C>],
+    layout: &ElfLayout<'data, C>,
+    shard_count: usize,
+) -> bool {
+    debug_assert!(A::DEBUG_RELOCATIONS_OVERWRITE);
+    let Some(ranges) =
+        speculative_debug_relocation_shard_ranges(relocations.len(), out.len(), shard_count, |i| {
+            elf::ElfRela::<C>::new(relocations[i]).offset()
+        })
+    else {
+        return false;
+    };
+
+    let mut remaining = out;
+    let mut shards = Vec::with_capacity(ranges.len());
+    for range in ranges {
+        let (shard_out, rest) = remaining.split_at_mut(range.output.end - range.output.start);
+        remaining = rest;
+        shards.push((range.relocations, range.output.start, shard_out));
+    }
+
+    shards
+        .into_par_iter()
+        .map(|(range, output_offset, shard_out)| {
+            let previous = range
+                .start
+                .checked_sub(1)
+                .map(|index| elf::ElfRela::new(relocations[index]));
+            apply_debug_relocations_impl::<C, A, elf::ElfRela<C>, _>(
+                object,
+                shard_out,
+                section_index,
+                relocations[range]
+                    .iter()
+                    .copied()
+                    .map(elf::ElfRela::new)
+                    .map(Ok),
+                layout,
+                output_offset as u64,
+                previous,
+            )
+            .is_ok()
+        })
+        .all(|ok| ok)
+}
+
 fn apply_debug_rela_relocations<'data, C: ElfClass, A: Arch<Platform = elf::Elf<C>>>(
     object: &ObjectLayout<'data, elf::Elf<C>>,
     out: &mut [u8],
@@ -2999,6 +3098,31 @@ fn apply_debug_rela_relocations<'data, C: ElfClass, A: Arch<Platform = elf::Elf<
 
     let shard_count =
         rayon::current_num_threads().min(relocations.len().div_ceil(PARALLEL_DEBUG_RELOCATION_MIN));
+    if A::DEBUG_RELOCATIONS_OVERWRITE {
+        if !try_apply_debug_rela_relocations_speculatively::<C, A>(
+            object,
+            out,
+            section_index,
+            relocations,
+            layout,
+            shard_count,
+        ) {
+            // Some relocation didn't fit its shard, or failed. Every debug relocation on this
+            // architecture overwrites its bytes with a value that doesn't depend on them, so
+            // reapplying all of them in order gives exactly the serial result, including any
+            // error.
+            return apply_debug_relocations::<C, A, elf::ElfRela<C>, _>(
+                object,
+                out,
+                section_index,
+                relocations.iter().copied().map(elf::ElfRela::new).map(Ok),
+                layout,
+            );
+        }
+        record_debug_relocations(object, section_index, layout, relocations.len());
+        return Ok(());
+    }
+
     let Some(ranges) = debug_relocation_shard_ranges_parallel(
         relocations.len(),
         out.len(),
@@ -3137,6 +3261,11 @@ fn apply_debug_relocations_impl<
         let shard_offset = offset_in_section
             .checked_sub(output_offset)
             .context("Debug relocation precedes its output shard")?;
+        if shard_offset > out.len() as u64 {
+            bail!(
+                "Debug relocation at offset 0x{offset_in_section:x} is past the end of its output"
+            );
+        }
         if try_apply_debug_relocation_fast::<C, A, R>(
             object,
             shard_offset,
@@ -3192,6 +3321,54 @@ mod debug_relocation_shard_tests {
     use super::DebugRelocationShardRange;
     use super::DebugSymbolCache;
     use super::debug_relocation_shard_ranges_parallel;
+    use super::speculative_debug_relocation_shard_ranges;
+
+    #[test]
+    fn speculative_shards_split_output_at_shard_start_offsets() {
+        let offsets = [0, 4, 8, 12, 16, 20, 24, 28];
+        let ranges =
+            speculative_debug_relocation_shard_ranges(offsets.len(), 32, 4, |i| offsets[i])
+                .unwrap();
+        assert_eq!(
+            ranges,
+            vec![
+                DebugRelocationShardRange {
+                    relocations: 0..2,
+                    output: 0..8,
+                },
+                DebugRelocationShardRange {
+                    relocations: 2..4,
+                    output: 8..16,
+                },
+                DebugRelocationShardRange {
+                    relocations: 4..6,
+                    output: 16..24,
+                },
+                DebugRelocationShardRange {
+                    relocations: 6..8,
+                    output: 24..32,
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn speculative_shards_reject_backwards_or_out_of_bounds_starts() {
+        // Shard starts go backwards.
+        let offsets = [0, 4, 20, 24, 8, 12, 28, 30];
+        assert!(
+            speculative_debug_relocation_shard_ranges(offsets.len(), 32, 4, |i| offsets[i])
+                .is_none()
+        );
+        // A shard starts past the end of the output.
+        let offsets = [0, 4, 8, 12, 40, 44, 48, 52];
+        assert!(
+            speculative_debug_relocation_shard_ranges(offsets.len(), 32, 4, |i| offsets[i])
+                .is_none()
+        );
+        // Too few relocations to split.
+        assert!(speculative_debug_relocation_shard_ranges(1, 32, 4, |_| 0).is_none());
+    }
 
     #[test]
     fn preflight_splits_sorted_non_overlapping_relocations() {
