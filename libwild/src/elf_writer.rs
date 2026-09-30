@@ -2733,7 +2733,7 @@ fn apply_relocations<
     Ok(())
 }
 
-const PARALLEL_DEBUG_RELOCATION_MIN: usize = 64 * 1024;
+const PARALLEL_DEBUG_RELOCATION_MIN: usize = 16;
 // Byte and bit-mask relocations modify at most eight bytes. A paired ULEB128 relocation can
 // modify all ten bytes required to encode a u64.
 const MAX_DEBUG_RELOCATION_WRITE_SIZE: u64 = u64::BITS.div_ceil(7) as u64;
