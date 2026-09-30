@@ -865,7 +865,10 @@ impl<T: platform::Args> ArgumentParser<T> {
         // Prefix options. These should be handled after processing long and short options,
         // because some options (like `-hashstyle=gnu`) can be misinterpreted as prefix options.
         for (prefix, handler) in &self.prefix_options {
-            if let Some(rest) = arg.strip_prefix(&format!("-{prefix}")) {
+            if let Some(rest) = arg
+                .strip_prefix('-')
+                .and_then(|arg| arg.strip_prefix(*prefix))
+            {
                 let value = if rest.is_empty() {
                     let next_arg = input
                         .next()
