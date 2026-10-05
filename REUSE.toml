@@ -33,6 +33,7 @@ path = [
   "FAQ.md",
   "USAGE.md",
   "REUSE.toml",
+  "ci.toml",
   "rust-toolchain.toml",
   "benchmarks/**",
   "cackle.toml",
