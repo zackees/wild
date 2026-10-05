@@ -5,9 +5,9 @@
 # measured 4.58 GiB across 26 entries (46% of the 10 GiB repository limit) on
 # 2026-10-05 with no `ci.toml` at all. It is a cache policy, not a rewrite of
 # wild's CI: the workflows are unchanged by this commit.
-schema  = 3
+schema = 3
 profile = "rust-bin-app"
-linter  = "zackees/ci.yml@aaf113ca50565244567c0d19f1e739e9d3120dda"   # ci.yml main, 2026-10-05
+linter = "zackees/ci.yml@aaf113ca50565244567c0d19f1e739e9d3120dda" # ci.yml main, 2026-10-05
 
 # ── Platforms ────────────────────────────────────────────────────────────────
 # Every id is a job that really exists in .github/workflows/ci.yml. The runner
@@ -16,16 +16,16 @@ linter  = "zackees/ci.yml@aaf113ca50565244567c0d19f1e739e9d3120dda"   # ci.yml m
 # `runs-on: ${{ matrix.<var>.runs_on }}`, and pinning here is the declaration
 # the workflows have not caught up to yet (noted in the PR; see "Known gaps").
 [platforms]
-linux-x64       = { target = "x86_64-unknown-linux-gnu",    runs-on = "ubuntu-24.04",     group = "linux" }
-linux-arm64     = { target = "aarch64-unknown-linux-gnu",   runs-on = "ubuntu-24.04-arm", group = "linux" }
-linux-riscv64   = { target = "riscv64gc-unknown-linux-gnu", runs-on = "ubuntu-24.04",     group = "linux" }
-linux-loong64   = { target = "loongarch64-unknown-linux-gnu", runs-on = "ubuntu-24.04",    group = "linux" }
-linux-ppc64le   = { target = "powerpc64le-unknown-linux-gnu", runs-on = "ubuntu-24.04",   group = "linux" }
-linux-x64-musl  = { target = "x86_64-unknown-linux-musl",   runs-on = "ubuntu-24.04",     group = "linux" }
+linux-x64 = { target = "x86_64-unknown-linux-gnu", runs-on = "ubuntu-24.04", group = "linux" }
+linux-arm64 = { target = "aarch64-unknown-linux-gnu", runs-on = "ubuntu-24.04-arm", group = "linux" }
+linux-riscv64 = { target = "riscv64gc-unknown-linux-gnu", runs-on = "ubuntu-24.04", group = "linux" }
+linux-loong64 = { target = "loongarch64-unknown-linux-gnu", runs-on = "ubuntu-24.04", group = "linux" }
+linux-ppc64le = { target = "powerpc64le-unknown-linux-gnu", runs-on = "ubuntu-24.04", group = "linux" }
+linux-x64-musl = { target = "x86_64-unknown-linux-musl", runs-on = "ubuntu-24.04", group = "linux" }
 linux-arm64-musl = { target = "aarch64-unknown-linux-musl", runs-on = "ubuntu-24.04-arm", group = "linux" }
-linux-wasm32    = { target = "wasm32-wasip1",               runs-on = "ubuntu-24.04",     group = "linux" }
-macos-arm64     = { target = "aarch64-apple-darwin",        runs-on = "macos-15",         group = "macos" }
-windows-x64     = { target = "x86_64-pc-windows-msvc",      runs-on = "windows-2025",     group = "windows" }
+linux-wasm32 = { target = "wasm32-wasip1", runs-on = "ubuntu-24.04", group = "linux" }
+macos-arm64 = { target = "aarch64-apple-darwin", runs-on = "macos-15", group = "macos" }
+windows-x64 = { target = "x86_64-pc-windows-msvc", runs-on = "windows-2025", group = "windows" }
 
 # NOTE ON CARDINALITY. These ten ids exist so RUN-001/RUN-002/contract checks
 # have a truthful platform inventory. They deliberately do NOT drive the cache
@@ -48,13 +48,13 @@ windows-x64     = { target = "x86_64-pc-windows-msvc",      runs-on = "windows-2
 # `run` strings are the literal commands the workflow already runs; this file
 # does not introduce or relocate any test.
 [suites]
-build   = { run = "cargo build --profile ci --workspace --no-default-features", required = true }
-test    = { run = "cargo test --profile ci --workspace", required = true }
-clippy  = { run = "cargo clippy --all-targets --workspace --target x86_64-unknown-linux-gnu", required = true }
-fmt     = { run = "cargo fmt --all -- --check", required = true }
-cross   = { run = "cargo build --target riscv64gc-unknown-linux-gnu" }
-wasm    = { run = "soldr cargo test --features wasm -- wasm" }
-macho   = { run = "soldr cargo test --profile ci --workspace --features macho" }
+build = { run = "cargo build --profile ci --workspace --no-default-features", required = true }
+test = { run = "cargo test --profile ci --workspace", required = true }
+clippy = { run = "cargo clippy --all-targets --workspace --target x86_64-unknown-linux-gnu", required = true }
+fmt = { run = "cargo fmt --all -- --check", required = true }
+cross = { run = "cargo build --target riscv64gc-unknown-linux-gnu" }
+wasm = { run = "soldr cargo test --features wasm -- wasm" }
+macho = { run = "soldr cargo test --profile ci --workspace --features macho" }
 windows = { run = "soldr cargo build --profile ci --workspace --no-default-features" }
 minimal = { run = "cargo minimal-versions --direct test --profile ci", cache = "none" }
 external = { run = "cargo test --features external_tests external_test_suites" }
@@ -62,22 +62,29 @@ external = { run = "cargo test --features external_tests external_test_suites" }
 # ── Flows ────────────────────────────────────────────────────────────────────
 [flow.pr]
 platforms = ["linux-x64", "linux-arm64"]
-suites    = ["build", "test", "fmt"]
+suites = ["build", "test", "fmt"]
 
 [flow.main]
-extends   = "pr"
-cache     = "write"
+extends = "pr"
+cache = "write"
 
 [flow.release]
-extends   = "pr"
+extends = "pr"
 platforms = "all"
-suites    = "all"
-publish   = "none"
+suites = "all"
+publish = "none"
 
 # ── Tags that are not derived ────────────────────────────────────────────────
 [tags]
-ci-full   = { add = { platforms = "all", suites = ["cross", "wasm", "macho", "windows", "minimal", "external"] } }
-no-test   = { remove = { suites = ["test"] } }
+ci-full = { add = { platforms = "all", suites = [
+  "cross",
+  "wasm",
+  "macho",
+  "windows",
+  "minimal",
+  "external",
+] } }
+no-test = { remove = { suites = ["test"] } }
 
 # ── Caches (§6) ──────────────────────────────────────────────────────────────
 # Budget arithmetic is in the PR body. Steady total 2 751 MB; because NO writer
@@ -86,10 +93,11 @@ no-test   = { remove = { suites = ["test"] } }
 # lockfile-change peak applies too: worst = 2 751 + 2 715 + 0 = 5 466 MB
 # = 5.34 GiB, against a 9.5 GB budget.
 [cache]
-budget   = "9.5GB"
+budget = "9.5GB"
 write-on = ["main"]
-never    = ["target-dir", "incremental", "perf-results", "nix-store"]
-pr       = { mode = "none", families = [], max-per-pr = "0MB", budget = "0MB", trim = "on-close" }
+never = ["target-dir", "incremental", "perf-results", "nix-store"]
+pr = { mode = "none", families = [
+], max-per-pr = "0MB", budget = "0MB", trim = "on-close" }
 
 # Measured live on zackees/wild, 2026-10-05 (paginated `actions/caches`, after a
 # reclaim): 26 entries, 4.58 GiB. Each `max`/`shapes.max` is at or above the
@@ -101,10 +109,10 @@ pr       = { mode = "none", families = [], max-per-pr = "0MB", budget = "0MB", t
 # `setup-soldr-cargoregistry-v1-*`: 3 entries, 92 MB live, uniform across hosts
 # (31.0 / 30.9 / 30.4). Uniform enough for a single ceiling.
 [cache.family.registry]
-via      = "setup-soldr:cargo-registry"
-max      = "35MB"
+via = "setup-soldr:cargo-registry"
+max = "35MB"
 lockfile = true
-per      = "os"
+per = "os"
 
 # `soldr-mini-v2-*`: 3 entries, 29 MB live, uniform (10.3 / 10.1 / 8.6). Keyed on
 # the soldr version, NOT the lockfile, so `lockfile` stays false.
@@ -118,13 +126,13 @@ per = "os"
 # makes the footprint the honest sum. `lockfile = true`: the key carries
 # setup-soldr's source/lockfile hash (`f9e7e4902`).
 [cache.family.cook]
-via      = "setup-soldr:cook"
-max      = "700MB"
+via = "setup-soldr:cook"
+max = "700MB"
 lockfile = true
-evict    = "lru"
-per      = "os"
+evict = "lru"
+per = "os"
 [cache.family.cook.shapes]
-linux-x64   = { max = "700MB" }
+linux-x64 = { max = "700MB" }
 macos-arm64 = { max = "660MB" }
 windows-x64 = { max = "420MB" }
 
@@ -132,13 +140,13 @@ windows-x64 = { max = "420MB" }
 # 253 windows-x64 / 114 linux-x64). A 3.7x spread across hosts — the clearest
 # case for per-shape ceilings in this repository.
 [cache.family.compile]
-via      = "setup-soldr:build-cache"
-max      = "460MB"
+via = "setup-soldr:build-cache"
+max = "460MB"
 lockfile = true
-evict    = "lru"
-per      = "os"
+evict = "lru"
+per = "os"
 [cache.family.compile.shapes]
-linux-x64   = { max = "140MB" }
+linux-x64 = { max = "140MB" }
 macos-arm64 = { max = "460MB" }
 windows-x64 = { max = "290MB" }
 
@@ -172,8 +180,8 @@ mode = "off"
 # the "no gate configured" reading intact.
 [local]
 runner = "docker-act"
-lanes  = ["build", "test", "clippy", "fmt"]
-cache  = "machine"
+lanes = ["build", "test", "clippy", "fmt"]
+cache = "machine"
 
 # ── Allowlists ───────────────────────────────────────────────────────────────
 [allow]
@@ -193,7 +201,7 @@ actions = [
   "docker/login-action",
   "docker/metadata-action",
 ]
-tools   = ["cargo", "soldr", "nix", "docker", "python3", "git"]
+tools = ["cargo", "soldr", "nix", "docker", "python3", "git"]
 secrets = []
 
 # wild's platform facade already exists and is already the right shape:
@@ -213,7 +221,7 @@ secrets = []
 #   * `linker-diff/src/utils.rs` — its tests gate `target_os = "linux"` and
 #     `cfg!(target_arch = ...)` around objdump-based disassembly.
 platform-selector = "libwild/src/host/mod.rs"
-platform-code     = [
+platform-code = [
   "libwild/src/host/**",
   "libwild/src/args/elf.rs",
   "libwild/src/tidy_tests.rs",
@@ -240,13 +248,13 @@ require = { "cache" = "true", "solo-toolchain-cache" = "false" }
 # One entry per workflow file the repository actually ships, with the triggers
 # that file really carries (read off .github/workflows/*.yml, 2026-10-05).
 [allow.workflows]
-"ci.yml"                   = ["pull_request", "push:main", "workflow_dispatch"]
-"cron.yml"                 = ["schedule", "workflow_dispatch"]
-"nix.yml"                  = ["push:main", "workflow_dispatch"]
-"build-images.yml"         = ["pull_request", "workflow_dispatch"]
-"performance-guard.yml"    = ["pull_request"]
-"promote.yml"              = ["release:published"]
-"release.yml"              = ["push:tag", "pull_request", "workflow_dispatch"]
+"ci.yml" = ["pull_request", "push:main", "workflow_dispatch"]
+"cron.yml" = ["schedule", "workflow_dispatch"]
+"nix.yml" = ["push:main", "workflow_dispatch"]
+"build-images.yml" = ["pull_request", "workflow_dispatch"]
+"performance-guard.yml" = ["pull_request"]
+"promote.yml" = ["release:published"]
+"release.yml" = ["push:tag", "pull_request", "workflow_dispatch"]
 "update-nix-lockfile.yaml" = ["schedule", "workflow_dispatch"]
 
 # ── Publish ──────────────────────────────────────────────────────────────────
@@ -262,8 +270,8 @@ require = { "cache" = "true", "solo-toolchain-cache" = "false" }
 # (RELEASING.md: "Run `cargo publish` for each package"), so it has no
 # public/private split to declare truthfully.
 [[exceptions]]
-rule    = "RUST-005"
-path    = "wild/tests"
-reason  = "one integration-test target already; nothing to consolidate"
-issue   = "https://github.com/zackees/wild/issues/37"
+rule = "RUST-005"
+path = "wild/tests"
+reason = "one integration-test target already; nothing to consolidate"
+issue = "https://github.com/zackees/wild/issues/37"
 expires = "2027-01-31"
